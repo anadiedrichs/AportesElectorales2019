@@ -1,7 +1,7 @@
 ---
 title: "Aportantes electorales elecciones 2019 en Argentina"
-author: "Ana Laura Diedrichs"
-date: "August 9, 2019"
+author: "Ana Laura Diedrichs, @anadiedrichs"
+date: "13 de Agosto, 2019"
 output: 
   html_document:
     code_download: true
@@ -21,42 +21,111 @@ library(kableExtra)
 
 # Analizando los aportes electorales
 
+## Intro
+
 El archivo aportes.csv fue descargado de la página web https://aportantes.electoral.gob.ar/aportes
 
-```{r, echo=FALSE,include=FALSE}
+Para saber más sobre la declaración de aportantes en el proceso electoral recomiendo este [artículo de Chequeado ](https://chequeado.com/hilando-fino/una-plataforma-para-registrar-los-aportes-de-campana/)
 
+
+```{r, echo=FALSE,include=FALSE}
+# PUedes descargarlo y colocar el archivo en el mismo lugar donde esté este archivo aporte.Rmd
 library(readr)
 dataset <- read_csv("aportes.csv")
 
 ```
 
-El dataset aportes.csv tiene formato tabular, contiene `r nrow(dataset) ` filas, donde cada una corresponde a un aporte realizado a algún partido político. En total son `r ncol(dataset)` columnas denominadas como `r colnames(dataset)`
+
+```{r, echo = FALSE}
+#Descargarmos el archivo usando read.csv de la librería utils.
+
+dataset <- read.csv("https://aportantes.electoral.gob.ar/aportes/descargar-csv/?destino=&distrito=&agrupacion=&nombre=&cuit=&genero=&modalidad=&banco=&desde=&hasta=&search=1")
+```
+
+El dataset *aportes.csv* tiene formato tabular, contiene `r nrow(dataset) ` filas, donde cada una corresponde a un aporte realizado a algún partido político. En total son `r ncol(dataset)` columnas denominadas como `r colnames(dataset)`.
+
+La columna Rectificado indica si se realizó algún cambio en el registro y detallan en la columna Observación. En Anulado observamos si ese aporte fue anulado, por ejemplo, errores de transacción por aportes repetidos.
+
+Filtramos los aportes anulados. Vemos que hay un caso.
+
+```{r}
+dataset %>% filter(Anulado == "True")
+```
+
+```{r}
+dataset <- dataset %>% filter(Anulado != "True")
+```
 
 ## Total recibido por cada agrupación
 
-```{r ,echo=FALSE}
+```{r,echo=FALSE }
 dataset %>% 
   select(Agrupacion,Monto) %>% 
   group_by(Agrupacion)  %>% 
   summarise(total=sum(Monto)) %>% 
-  arrange(desc(total)) %>%
+  arrange(desc(total)) %>% 
   kable() %>%
-   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
-
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
 ```
-#### Histograma de montos recibidos por agrupación.
+
+Observamos que las agrupaciones son las listas electorales. Un partido político puede tener varias listas. Vamos a agrupar por partido los montos.
 
 ```{r,echo=FALSE}
-ggplot(dataset, aes(x=Agrupacion, y=Monto)) + 
+data <- dataset
+data$Agrupacion <- substr(data$Agrupacion,6,1000000L)
+
+data %>% 
+  select(Agrupacion,Monto) %>% 
+  group_by(Agrupacion)  %>% 
+  summarise(total=sum(Monto)) %>% 
+  arrange(desc(total)) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+```
+
+
+#### Histograma de montos recibidos por partido.
+
+```{r,echo=FALSE}
+ggplot(data, aes(x=Agrupacion, y=Monto)) + 
   geom_boxplot() +
   coord_flip()
 ```
 
-Se observa que hay varios outliers, pocos aportes mayores al millón y medio de pesos.
+Se observa que hay varios outliers, pocos aportes mayores al millón y medio de pesos. Veamos cuantos aportes mayores a 500.000 hay.
 
+
+```{r}
+quinientos <- data %>% 
+  select(Aportante,Distrito,Agrupacion,Monto) %>% 
+  filter(Monto >= 500000) %>% 
+  arrange(desc(Monto)) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+
+quinientos
+```
+
+En total hay unos `r nrow(quinientos)` aportes mayores a 500.000 pesos.
+
+Veremos la distribución de los montos aportados para los dos principales fuerzas políticas: Juntos por el cambio y Frente de Todos.
+
+```{r}
+data %>% 
+  select(Agrupacion,Monto) %>% 
+  filter(Agrupacion == " FRENTE DE TODOS") %>% 
+  ggplot(aes(x=Agrupacion, y=log(Monto))) +   geom_boxplot() + coord_flip()
+```
+
+```{r}
+data %>% 
+  select(Agrupacion,Monto) %>% 
+  filter(Agrupacion == " JUNTOS POR EL CAMBIO") %>% 
+  ggplot(aes(x=Agrupacion, y=log(Monto))) + geom_boxplot() + coord_flip()
+```
 ## Aportantes
 
-### Cantidad de aportes realizados para cada Agrupación
+### Cantidad de aportes realizados para cada lista
 
 ```{r,echo=FALSE}
 dataset %>% 
@@ -67,6 +136,20 @@ dataset %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
 
 ```
+
+### Cantidad de aportes realizados para cada partido
+
+```{r,echo=FALSE}
+data %>% 
+  select(Aportante,Agrupacion) %>% group_by(Agrupacion)  %>% 
+  tally() %>% 
+  arrange(desc(n) ) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+
+```
+
+Observamos que el FRENTE DE TODOS, PARTIDO DE TRABAJADORES POR EL SOCIALISMO Y JUNTOS POR EL CAMBIO son quienes más aportes u operaciones de aportes recibieron.
 
 ### Distinguiendo aportes con aportantes repetidos
 
@@ -118,7 +201,7 @@ dataset %>%
 ```
 
 
-### Aportantes que más dinero, aportaron. Realizamos un top 10
+### Aportantes que más dinero aportaron. Realizamos un top 10
 
 ```{r,echo=FALSE}
 dataset %>% 
@@ -129,7 +212,7 @@ dataset %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
 ```
 
-### Por cada partido político (Agrupación), top 5 de los aportantes que más aportaron.
+### Por cada partido político (Agrupación), top 5 de los Aportantes que más aportaron.
 
 ```{r,echo=FALSE}
 dataset %>% 
@@ -144,16 +227,48 @@ dataset %>%
 
 ```
 
+### Aportes de Empresas o personas jurídicas.
+
+Si bien no hay un campo que indique si la institución es una empresa o persona física, podemos saberlo gracias al [CUIT](https://es.wikipedia.org/wiki/Clave_%C3%9Anica_de_Identificaci%C3%B3n_Tributaria). Los CUIT que empiecen con
+30,33 o 34 indicarían persona jurídica.
+
+A continuación los aportes realizados por empresa.
+
+```{r,echo=FALSE}
+data %>% 
+  select(Aportante,Agrupacion,Monto,Cuil.Cuit) %>% 
+  filter(Cuil.Cuit >= 30000000000) %>% 
+  arrange(Agrupacion,Aportante) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+```
+
 ### Valor per cápita
 
 Cuánto se aportó a cada agrupación per cápita, es decir, la división del monto total o dinero total aportado
-dividido por el número de personas aportantes.
+dividido por el número de operaciones o transacciones aportantes. 
 
-TODO 
 
+El dinero total dividido el número de operaciones o transacciones realizadas (aportes).
 
 ```{r,echo=FALSE}
-#WIP
+dataset %>% select(Aportante,Agrupacion,Monto) %>% 
+  group_by(Agrupacion) %>% 
+  summarise(N = length(Aportante),total = sum(Monto)) %>%
+  mutate(PerCapita=total/N) %>%
+  arrange(desc(PerCapita))  %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+  
+```
+
+### Un TODO list.
+
+Queda por hacer un valor per capita de dividir el monto total por partido dividido las personas/empresas, pero quitando los aportantes repetidos.
+
+
+```{r,echo=FALSE, include=FALSE}
+#viendo cuantos "Aportantes" repetidos hay 
 dataset %>% 
   select(Aportante,Agrupacion) %>% 
   group_by(Agrupacion,Aportante) %>% 
@@ -162,18 +277,6 @@ dataset %>%
   arrange(Agrupacion)
 ```
 
+## Quiero el código
 
-Quitar por agrupacion los aportantes repetidos 
-
-El dinero total dividido el número de operaciones o transacciones realizadas (aportes)
-
-```{r,echo=FALSE}
-dataset %>% select(Aportante,Agrupacion,Monto) %>% 
-  group_by(Agrupacion) %>% 
-  summarise(N = length(Aportante),total = sum(Monto)) %>%
-  mutate(PerCapita=total/N) %>%
-  arrange(desc(PerCapita)) %>% 
-  kable() %>%
-  kable_styling(bootstrap_options = c("striped", "hover"))
-  
-```
+Podés descargarlo desde [el repo en GitHub](https://github.com/anadiedrichs/AportesElectorales2019) o si haces click en el botón superior derecho de Rpub en **Download Code**
