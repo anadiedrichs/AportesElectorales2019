@@ -1,0 +1,179 @@
+---
+title: "Aportantes electorales elecciones 2019 en Argentina"
+author: "Ana Laura Diedrichs"
+date: "August 9, 2019"
+output: 
+  html_document:
+    code_download: true
+    toc: true
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(DataExplorer)
+library(ggplot2)
+library(kableExtra)
+```
+
+# Analizando los aportes electorales
+
+El archivo aportes.csv fue descargado de la página web https://aportantes.electoral.gob.ar/aportes
+
+```{r, echo=FALSE,include=FALSE}
+
+library(readr)
+dataset <- read_csv("aportes.csv")
+
+```
+
+El dataset aportes.csv tiene formato tabular, contiene `r nrow(dataset) ` filas, donde cada una corresponde a un aporte realizado a algún partido político. En total son `r ncol(dataset)` columnas denominadas como `r colnames(dataset)`
+
+## Total recibido por cada agrupación
+
+```{r ,echo=FALSE}
+dataset %>% 
+  select(Agrupacion,Monto) %>% 
+  group_by(Agrupacion)  %>% 
+  summarise(total=sum(Monto)) %>% 
+  arrange(desc(total)) %>%
+  kable() %>%
+   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+
+```
+#### Histograma de montos recibidos por agrupación.
+
+```{r,echo=FALSE}
+ggplot(dataset, aes(x=Agrupacion, y=Monto)) + 
+  geom_boxplot() +
+  coord_flip()
+```
+
+Se observa que hay varios outliers, pocos aportes mayores al millón y medio de pesos.
+
+## Aportantes
+
+### Cantidad de aportes realizados para cada Agrupación
+
+```{r,echo=FALSE}
+dataset %>% 
+  select(Aportante,Agrupacion) %>% group_by(Agrupacion)  %>% 
+  tally() %>% 
+  arrange(desc(n) ) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+
+```
+
+### Distinguiendo aportes con aportantes repetidos
+
+```{r,echo=FALSE}
+
+dd <- dataset %>% 
+  select(Aportante) %>% 
+  group_by(Aportante) %>% 
+  tally() %>% 
+  filter(n > 1) %>%
+  arrange(desc(n)) 
+
+repetidos <- nrow(dd)
+operacionesRepetidas <- sum(dd$n)
+```
+
+Una persona puede haber aportado más de una vez. 
+
+Hay repetidos unos `r repetidos` aportantes repetidos, es decir, realizaron más de un aporte.
+
+En total estas `r repetidos` personas aportantes aportantes realizaron `r sum(dd$n)` operaciones o aportes.
+
+Observamos una lista de aportantes y el total de aportes realizados.
+
+#### Ordenada de mayor a menor cantidad de aportes.
+
+```{r,echo=FALSE}
+dataset %>% 
+  select(Aportante) %>% 
+  group_by(Aportante) %>% 
+  tally() %>% 
+  filter(n > 1) %>%
+  arrange(desc(n)) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+```
+
+#### Ordenada alfabéticamente.
+
+```{r,echo=FALSE}
+dataset %>% 
+  select(Aportante) %>% 
+  group_by(Aportante) %>% 
+  tally() %>% 
+  filter(n > 1) %>%
+  arrange(Aportante) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+```
+
+
+### Aportantes que más dinero, aportaron. Realizamos un top 10
+
+```{r,echo=FALSE}
+dataset %>% 
+  select(Aportante,Agrupacion,Monto) %>% 
+  arrange(desc(Monto))  %>% 
+  top_n(10,Monto) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+```
+
+### Por cada partido político (Agrupación), top 5 de los aportantes que más aportaron.
+
+```{r,echo=FALSE}
+dataset %>% 
+  select(Aportante,Agrupacion,Monto) %>% 
+  group_by(Agrupacion, Aportante) %>% 
+  summarise(total = sum(Monto)) %>% 
+  arrange(Agrupacion,desc(total))  %>% 
+  group_by(Agrupacion) %>%
+  top_n(n=5,wt=total) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
+
+```
+
+### Valor per cápita
+
+Cuánto se aportó a cada agrupación per cápita, es decir, la división del monto total o dinero total aportado
+dividido por el número de personas aportantes.
+
+TODO 
+
+
+```{r,echo=FALSE}
+#WIP
+dataset %>% 
+  select(Aportante,Agrupacion) %>% 
+  group_by(Agrupacion,Aportante) %>% 
+  tally() %>% 
+  filter(n > 1) %>%
+  arrange(Agrupacion)
+```
+
+
+Quitar por agrupacion los aportantes repetidos 
+
+El dinero total dividido el número de operaciones o transacciones realizadas (aportes)
+
+```{r,echo=FALSE}
+dataset %>% select(Aportante,Agrupacion,Monto) %>% 
+  group_by(Agrupacion) %>% 
+  summarise(N = length(Aportante),total = sum(Monto)) %>%
+  mutate(PerCapita=total/N) %>%
+  arrange(desc(PerCapita)) %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+  
+```
