@@ -7,7 +7,7 @@ output:
     code_download: true
     toc: true
     toc_float: 
-      collapsed: false
+      collapsed: true
       smooth_scroll: true
 ---
 
@@ -35,7 +35,6 @@ dataset <- read_csv("aportes.csv")
 
 ```
 
-
 ```{r, echo = FALSE}
 #Descargarmos el archivo usando read.csv de la librería utils.
 
@@ -48,15 +47,19 @@ La columna Rectificado indica si se realizó algún cambio en el registro y deta
 
 Filtramos los aportes anulados. Vemos que hay un caso.
 
-```{r}
-dataset %>% filter(Anulado == "True")
+```{r,echo=FALSE}
+dataset %>% filter(Anulado == "True") %>% 
+  kable() %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),fixed_thead = T)
 ```
 
-```{r}
+```{r,echo=FALSE}
 dataset <- dataset %>% filter(Anulado != "True")
 ```
 
-## Total recibido por cada agrupación
+## Aportes
+
+### Total recibido por cada lista
 
 ```{r,echo=FALSE }
 dataset %>% 
@@ -69,6 +72,8 @@ dataset %>%
 ```
 
 Observamos que las agrupaciones son las listas electorales. Un partido político puede tener varias listas. Vamos a agrupar por partido los montos.
+
+### Totales por partido político
 
 ```{r,echo=FALSE}
 data <- dataset
@@ -92,10 +97,10 @@ ggplot(data, aes(x=Agrupacion, y=Monto)) +
   coord_flip()
 ```
 
-Se observa que hay varios outliers, pocos aportes mayores al millón y medio de pesos. Veamos cuantos aportes mayores a 500.000 hay.
+Se observa que hay varios outliers, pocos aportes mayores al millón y medio de pesos. Veamos cuantos aportes mayores a 500.000 hay y quienes son.
 
 
-```{r}
+```{r,echo=FALSE}
 quinientos <- data %>% 
   select(Aportante,Distrito,Agrupacion,Monto) %>% 
   filter(Monto >= 500000) %>% 
@@ -108,21 +113,24 @@ quinientos
 
 En total hay unos `r nrow(quinientos)` aportes mayores a 500.000 pesos.
 
-Veremos la distribución de los montos aportados para los dos principales fuerzas políticas: Juntos por el cambio y Frente de Todos.
+### Montos de principales fuerzas políticas: distribución
 
-```{r}
+Veremos la distribución de los montos aportados para los dos principales fuerzas políticas: Juntos por el cambio y Frente de Todos, en escala logarítmica.
+
+```{r,echo=FALSE}
 data %>% 
   select(Agrupacion,Monto) %>% 
   filter(Agrupacion == " FRENTE DE TODOS") %>% 
   ggplot(aes(x=Agrupacion, y=log(Monto))) +   geom_boxplot() + coord_flip()
 ```
 
-```{r}
+```{r,echo=FALSE}
 data %>% 
   select(Agrupacion,Monto) %>% 
   filter(Agrupacion == " JUNTOS POR EL CAMBIO") %>% 
   ggplot(aes(x=Agrupacion, y=log(Monto))) + geom_boxplot() + coord_flip()
 ```
+
 ## Aportantes
 
 ### Cantidad de aportes realizados para cada lista
@@ -262,9 +270,9 @@ dataset %>% select(Aportante,Agrupacion,Monto) %>%
   
 ```
 
-### Un TODO list.
+### Que más hacer con estos datos
 
-Queda por hacer un valor per capita de dividir el monto total por partido dividido las personas/empresas, pero quitando los aportantes repetidos.
+Me interesaría un valor per capita de dividir el monto total por partido dividido las personas/empresas, pero quitando los aportantes repetidos.
 
 
 ```{r,echo=FALSE, include=FALSE}
@@ -279,4 +287,4 @@ dataset %>%
 
 ## Quiero el código
 
-Podés descargarlo desde [el repo en GitHub](https://github.com/anadiedrichs/AportesElectorales2019) o si haces click en el botón superior derecho de Rpub en **Download Code**
+Podés descargarlo desde [el repo en GitHub](https://github.com/anadiedrichs/AportesElectorales2019) o si haces click en el botón superior derecho de Rpub en **Code --> Download Rmd**
